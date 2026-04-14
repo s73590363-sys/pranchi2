@@ -1,0 +1,2 @@
+DROP POLICY "Post images are publicly accessible" ON storage.objects;
+CREATE POLICY "Post images are accessible by authenticated users" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'post-images');
