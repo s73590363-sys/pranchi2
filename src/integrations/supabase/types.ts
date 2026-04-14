@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      gallery_folders: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          folder_id: string | null
+          id: string
+          image_url: string | null
+          likes_count: number
+          location: string | null
+          media_type: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          image_url?: string | null
+          likes_count?: number
+          location?: string | null
+          media_type?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          image_url?: string | null
+          likes_count?: number
+          location?: string | null
+          media_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
