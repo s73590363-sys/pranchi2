@@ -102,15 +102,75 @@ const Gallery = () => {
   const stopSlideshow = () => { setSlideshow(false); if (slideshowRef.current) clearInterval(slideshowRef.current); };
   const closeLightbox = () => { setLightbox(null); stopSlideshow(); };
 
-  // Create folder
+  // Create folder (with optional PIN)
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !user) return;
-    const { error } = await supabase.from("gallery_folders").insert({ name: newFolderName.trim(), created_by: user.id });
-    if (error) { toast({ title: "Failed to create folder", description: error.message, variant: "destructive" }); return; }
-    toast({ title: `Folder "${newFolderName.trim()}" created` });
+    const pin = newFolderPin.trim();
+    if (pin && !/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN must be 4 digits", variant: "destructive" });
+      return;
+    }
+    const { data: folder, error } = await supabase
+      .from("gallery_folders")
+      .insert({ name: newFolderName.trim(), created_by: user.id })
+      .select()
+      .single();
+    if (error || !folder) {
+      toast({ title: "Failed to create folder", description: error?.message, variant: "destructive" });
+      return;
+    }
+    if (pin) {
+      const { error: pinErr } = await supabase.rpc("set_folder_pin", { _folder_id: folder.id, _pin: pin });
+      if (pinErr) {
+        toast({ title: "Folder created but PIN failed", description: pinErr.message, variant: "destructive" });
+      }
+    }
+    toast({ title: `Folder "${newFolderName.trim()}" created${pin ? " with PIN lock" : ""}` });
     setNewFolderName("");
+    setNewFolderPin("");
     setFolderDialog(false);
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
+  };
+
+  // Manage PIN on existing folder (set / change / clear)
+  const handleSavePin = async () => {
+    if (!pinManageFolder) return;
+    const pin = managePin.trim();
+    if (pin && !/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN must be 4 digits (or empty to remove)", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin || null });
+    if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: pin ? "PIN updated" : "PIN removed" });
+    setPinManageFolder(null);
+    setManagePin("");
+    queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
+  };
+
+  // Open folder (prompts for PIN if locked)
+  const handleSelectFolder = (folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (folder?.is_locked && !unlockedFolders.has(folderId)) {
+      setPinPromptFolder(folderId);
+      setPinInput("");
+      return;
+    }
+    setActiveFolder(folderId);
+  };
+
+  // Verify PIN
+  const handleVerifyPin = async () => {
+    if (!pinPromptFolder) return;
+    setVerifying(true);
+    const { data, error } = await supabase.rpc("verify_folder_pin", { _folder_id: pinPromptFolder, _pin: pinInput });
+    setVerifying(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (!data) { toast({ title: "Incorrect PIN", variant: "destructive" }); return; }
+    setUnlockedFolders((prev) => new Set(prev).add(pinPromptFolder));
+    setActiveFolder(pinPromptFolder);
+    setPinPromptFolder(null);
+    setPinInput("");
   };
 
   // Delete folder
