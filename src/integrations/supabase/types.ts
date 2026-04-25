@@ -20,21 +20,27 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_locked: boolean
           name: string
+          pin_hash: string | null
         }
         Insert: {
           cover_image_url?: string | null
           created_at?: string
           created_by: string
           id?: string
+          is_locked?: boolean
           name: string
+          pin_hash?: string | null
         }
         Update: {
           cover_image_url?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          is_locked?: boolean
           name?: string
+          pin_hash?: string | null
         }
         Relationships: []
       }
@@ -114,7 +120,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_folder_pin: {
+        Args: { _folder_id: string; _pin: string }
+        Returns: boolean
+      }
+      verify_folder_pin: {
+        Args: { _folder_id: string; _pin: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

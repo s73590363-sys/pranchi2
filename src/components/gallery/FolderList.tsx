@@ -1,4 +1,4 @@
-import { FolderOpen, Plus, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Trash2, Lock, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Folder {
@@ -6,6 +6,7 @@ interface Folder {
   name: string;
   cover_image_url: string | null;
   created_at: string;
+  is_locked?: boolean;
 }
 
 interface FolderListProps {
@@ -14,9 +15,10 @@ interface FolderListProps {
   onSelect: (folderId: string) => void;
   onCreate: () => void;
   onDelete: (folderId: string) => void;
+  onManagePin: (folderId: string) => void;
 }
 
-const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete }: FolderListProps) => {
+const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete, onManagePin }: FolderListProps) => {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
@@ -39,21 +41,42 @@ const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete }: FolderLi
               className="group relative glass-card rounded-xl overflow-hidden cursor-pointer hover-lift"
             >
               <div
-                className="aspect-square flex items-center justify-center bg-secondary"
+                className="aspect-square flex items-center justify-center bg-secondary relative"
                 onClick={() => onSelect(folder.id)}
               >
-                {folder.cover_image_url ? (
+                {folder.cover_image_url && !folder.is_locked ? (
                   <img src={folder.cover_image_url} alt={folder.name} className="w-full h-full object-cover" />
+                ) : folder.is_locked ? (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Lock className="w-10 h-10" />
+                    <span className="text-xs font-body">Locked</span>
+                  </div>
                 ) : (
                   <FolderOpen className="w-12 h-12 text-muted-foreground" />
                 )}
+
+                {folder.is_locked && (
+                  <div className="absolute top-2 left-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm">
+                    <Lock className="w-3 h-3 text-foreground" />
+                  </div>
+                )}
+
                 {isAdmin && (
-                  <button
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      className="p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground"
+                      onClick={(e) => { e.stopPropagation(); onManagePin(folder.id); }}
+                      title="Set / change PIN"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                    </button>
+                    <button
+                      className="p-1.5 rounded-full bg-destructive/80 text-destructive-foreground hover:bg-destructive"
+                      onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="p-2 text-center">
