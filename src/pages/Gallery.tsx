@@ -148,10 +148,10 @@ const Gallery = () => {
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
   };
 
-  // Open folder (prompts for PIN if locked)
+  // Open folder (prompts for PIN if locked, admin opens without PIN)
   const handleSelectFolder = (folderId: string) => {
     const folder = folders.find((f) => f.id === folderId);
-    if (folder?.is_locked && !unlockedFolders.has(folderId)) {
+    if (folder?.is_locked && !isAdmin && !unlockedFolders.has(folderId)) {
       setPinPromptFolder(folderId);
       setPinInput("");
       return;
