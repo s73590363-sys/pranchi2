@@ -27,10 +27,10 @@ const stats = [
 
 const Admin = () => {
   const { user } = useAuth();
-  if (!isAdminUser(user?.email)) return <Navigate to="/gallery" replace />;
-
   const [announcement, setAnnouncement] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "members" | "reports" | "announce">("overview");
+
+  if (!isAdminUser(user?.email)) return <Navigate to="/gallery" replace />;
 
   const tabs = [
     { id: "overview" as const, label: "Overview", icon: BarChart3 },
