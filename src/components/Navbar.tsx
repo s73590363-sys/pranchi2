@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdminUser } from "@/lib/admin";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const isAdmin = isAdminUser(user?.email);
 
   const handleSignOut = async () => {
     await signOut();
@@ -17,7 +19,7 @@ const Navbar = () => {
 
   const links = [
     { to: "/gallery", label: "Gallery" },
-    { to: "/admin", label: "Admin" },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   return (

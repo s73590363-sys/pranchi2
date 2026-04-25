@@ -20,7 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-const ADMIN_EMAIL = "s73590363@gmail.com";
+import { ADMIN_EMAIL } from "@/lib/admin";
 const SLIDESHOW_INTERVAL = 4000;
 
 const Gallery = () => {
