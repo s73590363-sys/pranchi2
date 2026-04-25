@@ -35,6 +35,13 @@ const Gallery = () => {
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [folderDialog, setFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderPin, setNewFolderPin] = useState("");
+  const [pinPromptFolder, setPinPromptFolder] = useState<string | null>(null);
+  const [pinInput, setPinInput] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
+  const [pinManageFolder, setPinManageFolder] = useState<string | null>(null);
+  const [managePin, setManagePin] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const slideshowRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -52,7 +59,7 @@ const Gallery = () => {
     enabled: !!user,
   });
 
-  // Fetch media for active folder (or all)
+  // Fetch media for active folder (or root = no folder)
   const { data: media = [], isLoading } = useQuery({
     queryKey: ["gallery-media", activeFolder],
     queryFn: async () => {
@@ -64,6 +71,9 @@ const Gallery = () => {
 
       if (activeFolder) {
         query = query.eq("folder_id", activeFolder);
+      } else {
+        // Strict separation: root only shows media with no folder
+        query = query.is("folder_id", null);
       }
 
       const { data, error } = await query;
