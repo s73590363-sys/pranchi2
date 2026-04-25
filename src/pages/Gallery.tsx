@@ -167,7 +167,6 @@ const Gallery = () => {
     setVerifying(false);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     if (!data) { toast({ title: "Incorrect PIN", variant: "destructive" }); return; }
-    setUnlockedFolders((prev) => new Set(prev).add(pinPromptFolder));
     setActiveFolder(pinPromptFolder);
     setPinPromptFolder(null);
     setPinInput("");
