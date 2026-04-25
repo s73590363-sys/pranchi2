@@ -4,6 +4,9 @@ import { Users, Camera, Calendar, Shield, Trash2, Megaphone, BarChart3, UserChec
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAdminUser } from "@/lib/admin";
 
 const pendingMembers = [
   { name: "Aisha Khan", email: "aisha@email.com", initials: "AK", color: "from-teal-500 to-green-500", batchYear: 2024 },
@@ -23,6 +26,9 @@ const stats = [
 ];
 
 const Admin = () => {
+  const { user } = useAuth();
+  if (!isAdminUser(user?.email)) return <Navigate to="/gallery" replace />;
+
   const [announcement, setAnnouncement] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "members" | "reports" | "announce">("overview");
 
