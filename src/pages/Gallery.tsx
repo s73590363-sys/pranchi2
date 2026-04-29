@@ -112,7 +112,7 @@ const Gallery = () => {
     const { data: folder, error } = await supabase
       .from("gallery_folders")
       .insert({ name: newFolderName.trim(), created_by: user.id })
-      .select()
+      .select("id, name, cover_image_url, created_by, created_at, is_locked")
       .single();
     if (error || !folder) {
       toast({ title: "Failed to create folder", description: error?.message, variant: "destructive" });
