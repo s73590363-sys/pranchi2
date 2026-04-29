@@ -50,7 +50,7 @@ const Gallery = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gallery_folders")
-        .select("*")
+        .select("id, name, cover_image_url, created_by, created_at, is_locked")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -148,9 +148,14 @@ const Gallery = () => {
   };
 
   // Open folder (always prompts for PIN if locked — every time, for everyone)
-  const handleSelectFolder = (folderId: string) => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (folder?.is_locked) {
+  const handleSelectFolder = async (folderId: string) => {
+    const { data: requiresPin, error } = await (supabase.rpc as any)("folder_requires_pin", { _folder_id: folderId });
+    if (error) {
+      toast({ title: "Unable to open folder", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    if (requiresPin) {
       setPinPromptFolder(folderId);
       setPinInput("");
       return;
