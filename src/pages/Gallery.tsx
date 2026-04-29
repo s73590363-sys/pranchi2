@@ -39,7 +39,6 @@ const Gallery = () => {
   const [pinPromptFolder, setPinPromptFolder] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
   const [pinManageFolder, setPinManageFolder] = useState<string | null>(null);
   const [managePin, setManagePin] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
