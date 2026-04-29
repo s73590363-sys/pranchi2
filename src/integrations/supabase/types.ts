@@ -120,6 +120,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      folder_requires_pin: { Args: { _folder_id: string }; Returns: boolean }
       set_folder_pin: {
         Args: { _folder_id: string; _pin: string }
         Returns: boolean
