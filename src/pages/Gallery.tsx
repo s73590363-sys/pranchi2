@@ -317,10 +317,11 @@ const Gallery = () => {
           <FolderList
             folders={folders}
             isAdmin={isAdmin}
+            currentUserId={user?.id}
             onSelect={handleSelectFolder}
-            onCreate={() => setFolderDialog(true)}
+            onCreate={() => { setFolderDialog(true); setCreatePinError(null); }}
             onDelete={handleDeleteFolder}
-            onManagePin={(id) => { setPinManageFolder(id); setManagePin(""); }}
+            onManagePin={handleOpenManagePin}
           />
         )}
 
