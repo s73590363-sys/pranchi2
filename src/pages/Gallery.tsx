@@ -51,12 +51,34 @@ const Gallery = () => {
   const { data: folders = [] } = useQuery({
     queryKey: ["gallery-folders"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: folderRows, error } = await supabase
         .from("gallery_folders")
         .select("id, name, cover_image_url, created_by, created_at, is_locked")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      if (!folderRows || folderRows.length === 0) return [];
+
+      // Fetch the most recent image for each folder to use as a preview
+      const ids = folderRows.map((f) => f.id);
+      const { data: previewPosts } = await supabase
+        .from("posts")
+        .select("folder_id, image_url, media_type, created_at")
+        .in("folder_id", ids)
+        .not("image_url", "is", null)
+        .eq("media_type", "image")
+        .order("created_at", { ascending: false });
+
+      const previewMap = new Map<string, string>();
+      (previewPosts || []).forEach((p: any) => {
+        if (p.folder_id && !previewMap.has(p.folder_id) && p.image_url) {
+          previewMap.set(p.folder_id, p.image_url);
+        }
+      });
+
+      return folderRows.map((f) => ({
+        ...f,
+        preview_image_url: f.cover_image_url || previewMap.get(f.id) || null,
+      }));
     },
     enabled: !!user,
   });
