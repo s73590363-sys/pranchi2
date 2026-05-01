@@ -41,6 +41,9 @@ const Gallery = () => {
   const [verifying, setVerifying] = useState(false);
   const [pinManageFolder, setPinManageFolder] = useState<string | null>(null);
   const [managePin, setManagePin] = useState("");
+  const [createPinError, setCreatePinError] = useState<string | null>(null);
+  const [managePinError, setManagePinError] = useState<string | null>(null);
+  const [verifyPinError, setVerifyPinError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const slideshowRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
