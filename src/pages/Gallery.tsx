@@ -368,7 +368,7 @@ const Gallery = () => {
       )}
 
       {/* Create Folder Dialog */}
-      <Dialog open={folderDialog} onOpenChange={setFolderDialog}>
+      <Dialog open={folderDialog} onOpenChange={(o) => { setFolderDialog(o); if (!o) setCreatePinError(null); }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display">New Folder</DialogTitle>
@@ -378,18 +378,22 @@ const Gallery = () => {
             <Input
               placeholder="Folder name"
               value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
+              onChange={(e) => { setNewFolderName(e.target.value); if (createPinError) setCreatePinError(null); }}
               className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body"
             />
             <Input
               placeholder="4-digit PIN (required)"
               value={newFolderPin}
-              onChange={(e) => setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              onChange={(e) => { setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4)); if (createPinError) setCreatePinError(null); }}
               inputMode="numeric"
               maxLength={4}
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body tracking-widest"
+              aria-invalid={!!createPinError}
+              className={`bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body tracking-widest ${createPinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
               onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
             />
+            {createPinError && (
+              <p className="text-sm text-destructive font-body" role="alert">{createPinError}</p>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={handleCreateFolder} className="bg-foreground text-background hover:bg-foreground/90 font-display">
@@ -400,7 +404,7 @@ const Gallery = () => {
       </Dialog>
 
       {/* PIN Prompt Dialog (unlock) */}
-      <Dialog open={!!pinPromptFolder} onOpenChange={(o) => !o && setPinPromptFolder(null)}>
+      <Dialog open={!!pinPromptFolder} onOpenChange={(o) => { if (!o) { setPinPromptFolder(null); setVerifyPinError(null); } }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
@@ -412,12 +416,16 @@ const Gallery = () => {
             autoFocus
             placeholder="••••"
             value={pinInput}
-            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); if (verifyPinError) setVerifyPinError(null); }}
             inputMode="numeric"
             maxLength={4}
-            className="bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body"
+            aria-invalid={!!verifyPinError}
+            className={`bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body ${verifyPinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && pinInput.length === 4 && handleVerifyPin()}
           />
+          {verifyPinError && (
+            <p className="text-sm text-destructive font-body text-center" role="alert">{verifyPinError}</p>
+          )}
           <DialogFooter>
             <Button
               onClick={handleVerifyPin}
@@ -430,27 +438,31 @@ const Gallery = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Manage PIN Dialog (admin) */}
-      <Dialog open={!!pinManageFolder} onOpenChange={(o) => !o && setPinManageFolder(null)}>
+      {/* Manage PIN Dialog (creator or admin only) */}
+      <Dialog open={!!pinManageFolder} onOpenChange={(o) => { if (!o) { setPinManageFolder(null); setManagePinError(null); } }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
               <KeyRound className="w-4 h-4" /> Folder PIN
             </DialogTitle>
             <DialogDescription className="font-body">
-              Set a 4-digit PIN. Folders must remain locked.
+              Set a 4-digit PIN. Folders must remain locked. Only the folder creator or admin can change this.
             </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
             placeholder="4-digit PIN (required)"
             value={managePin}
-            onChange={(e) => setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onChange={(e) => { setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4)); if (managePinError) setManagePinError(null); }}
             inputMode="numeric"
             maxLength={4}
-            className="bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body"
+            aria-invalid={!!managePinError}
+            className={`bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body ${managePinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && handleSavePin()}
           />
+          {managePinError && (
+            <p className="text-sm text-destructive font-body text-center" role="alert">{managePinError}</p>
+          )}
           <DialogFooter>
             <Button onClick={handleSavePin} className="bg-foreground text-background hover:bg-foreground/90 font-display">
               Save
