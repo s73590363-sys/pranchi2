@@ -5,6 +5,7 @@ interface Folder {
   id: string;
   name: string;
   cover_image_url: string | null;
+  preview_image_url?: string | null;
   created_by?: string;
   created_at: string;
   is_locked?: boolean;
