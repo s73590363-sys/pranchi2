@@ -328,7 +328,7 @@ const Gallery = () => {
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display">New Folder</DialogTitle>
-            <DialogDescription className="font-body">Optionally lock with a 4-digit PIN.</DialogDescription>
+            <DialogDescription className="font-body">A 4-digit PIN is required to lock this folder.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
