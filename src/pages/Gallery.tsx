@@ -130,17 +130,17 @@ const Gallery = () => {
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
   };
 
-  // Manage PIN on existing folder (set / change / clear)
+  // Manage PIN on existing folder (PIN required — cannot remove)
   const handleSavePin = async () => {
     if (!pinManageFolder) return;
     const pin = managePin.trim();
-    if (pin && !/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN must be 4 digits (or empty to remove)", variant: "destructive" });
+    if (!/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN is required", description: "Folders must stay locked with a 4-digit PIN.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin || null });
+    const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin });
     if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
-    toast({ title: pin ? "PIN updated" : "PIN removed" });
+    toast({ title: "PIN updated" });
     setPinManageFolder(null);
     setManagePin("");
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
