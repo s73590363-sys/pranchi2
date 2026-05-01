@@ -101,12 +101,12 @@ const Gallery = () => {
   const stopSlideshow = () => { setSlideshow(false); if (slideshowRef.current) clearInterval(slideshowRef.current); };
   const closeLightbox = () => { setLightbox(null); stopSlideshow(); };
 
-  // Create folder (with optional PIN)
+  // Create folder (PIN is REQUIRED — every folder must be locked)
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !user) return;
     const pin = newFolderPin.trim();
-    if (pin && !/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN must be 4 digits", variant: "destructive" });
+    if (!/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN is required", description: "Please set a 4-digit PIN to lock this folder.", variant: "destructive" });
       return;
     }
     const { data: folder, error } = await supabase
@@ -118,13 +118,12 @@ const Gallery = () => {
       toast({ title: "Failed to create folder", description: error?.message, variant: "destructive" });
       return;
     }
-    if (pin) {
-      const { error: pinErr } = await supabase.rpc("set_folder_pin", { _folder_id: folder.id, _pin: pin });
-      if (pinErr) {
-        toast({ title: "Folder created but PIN failed", description: pinErr.message, variant: "destructive" });
-      }
+    const { error: pinErr } = await supabase.rpc("set_folder_pin", { _folder_id: folder.id, _pin: pin });
+    if (pinErr) {
+      toast({ title: "Folder created but PIN failed", description: pinErr.message, variant: "destructive" });
+    } else {
+      toast({ title: `Folder "${newFolderName.trim()}" created with PIN lock` });
     }
-    toast({ title: `Folder "${newFolderName.trim()}" created${pin ? " with PIN lock" : ""}` });
     setNewFolderName("");
     setNewFolderPin("");
     setFolderDialog(false);
