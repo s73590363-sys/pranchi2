@@ -41,6 +41,9 @@ const Gallery = () => {
   const [verifying, setVerifying] = useState(false);
   const [pinManageFolder, setPinManageFolder] = useState<string | null>(null);
   const [managePin, setManagePin] = useState("");
+  const [createPinError, setCreatePinError] = useState<string | null>(null);
+  const [managePinError, setManagePinError] = useState<string | null>(null);
+  const [verifyPinError, setVerifyPinError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const slideshowRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -103,12 +106,21 @@ const Gallery = () => {
 
   // Create folder (PIN is REQUIRED — every folder must be locked)
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim() || !user) return;
-    const pin = newFolderPin.trim();
-    if (!/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN is required", description: "Please set a 4-digit PIN to lock this folder.", variant: "destructive" });
+    if (!user) return;
+    if (!newFolderName.trim()) {
+      setCreatePinError("Folder name is required.");
       return;
     }
+    const pin = newFolderPin.trim();
+    if (pin.length === 0) {
+      setCreatePinError("PIN is required to lock this folder.");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setCreatePinError("PIN must be exactly 4 digits.");
+      return;
+    }
+    setCreatePinError(null);
     const { data: folder, error } = await supabase
       .from("gallery_folders")
       .insert({ name: newFolderName.trim(), created_by: user.id })
@@ -130,16 +142,41 @@ const Gallery = () => {
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
   };
 
+  // Open Manage PIN dialog — restricted to folder creator or admin
+  const handleOpenManagePin = (folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    const allowed = isAdmin || folder.created_by === user?.id;
+    if (!allowed) {
+      toast({ title: "Not authorized", description: "Only the folder creator or admin can change this PIN.", variant: "destructive" });
+      return;
+    }
+    setPinManageFolder(folderId);
+    setManagePin("");
+    setManagePinError(null);
+  };
+
   // Manage PIN on existing folder (PIN required — cannot remove)
   const handleSavePin = async () => {
     if (!pinManageFolder) return;
-    const pin = managePin.trim();
-    if (!/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN is required", description: "Folders must stay locked with a 4-digit PIN.", variant: "destructive" });
+    const folder = folders.find((f) => f.id === pinManageFolder);
+    const allowed = isAdmin || folder?.created_by === user?.id;
+    if (!allowed) {
+      setManagePinError("You are not authorized to change this folder's PIN.");
       return;
     }
+    const pin = managePin.trim();
+    if (pin.length === 0) {
+      setManagePinError("PIN is required. Folders must stay locked.");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setManagePinError("PIN must be exactly 4 digits.");
+      return;
+    }
+    setManagePinError(null);
     const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin });
-    if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+    if (error) { setManagePinError(error.message); return; }
     toast({ title: "PIN updated" });
     setPinManageFolder(null);
     setManagePin("");
@@ -157,6 +194,7 @@ const Gallery = () => {
     if (requiresPin) {
       setPinPromptFolder(folderId);
       setPinInput("");
+      setVerifyPinError(null);
       return;
     }
     setActiveFolder(folderId);
@@ -165,11 +203,16 @@ const Gallery = () => {
   // Verify PIN
   const handleVerifyPin = async () => {
     if (!pinPromptFolder) return;
+    if (!/^\d{4}$/.test(pinInput)) {
+      setVerifyPinError("Enter the 4-digit PIN.");
+      return;
+    }
+    setVerifyPinError(null);
     setVerifying(true);
     const { data, error } = await supabase.rpc("verify_folder_pin", { _folder_id: pinPromptFolder, _pin: pinInput });
     setVerifying(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    if (!data) { toast({ title: "Incorrect PIN", variant: "destructive" }); return; }
+    if (error) { setVerifyPinError(error.message); return; }
+    if (!data) { setVerifyPinError("Incorrect PIN. Please try again."); return; }
     setActiveFolder(pinPromptFolder);
     setPinPromptFolder(null);
     setPinInput("");
@@ -274,10 +317,11 @@ const Gallery = () => {
           <FolderList
             folders={folders}
             isAdmin={isAdmin}
+            currentUserId={user?.id}
             onSelect={handleSelectFolder}
-            onCreate={() => setFolderDialog(true)}
+            onCreate={() => { setFolderDialog(true); setCreatePinError(null); }}
             onDelete={handleDeleteFolder}
-            onManagePin={(id) => { setPinManageFolder(id); setManagePin(""); }}
+            onManagePin={handleOpenManagePin}
           />
         )}
 
@@ -324,7 +368,7 @@ const Gallery = () => {
       )}
 
       {/* Create Folder Dialog */}
-      <Dialog open={folderDialog} onOpenChange={setFolderDialog}>
+      <Dialog open={folderDialog} onOpenChange={(o) => { setFolderDialog(o); if (!o) setCreatePinError(null); }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display">New Folder</DialogTitle>
@@ -334,18 +378,22 @@ const Gallery = () => {
             <Input
               placeholder="Folder name"
               value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
+              onChange={(e) => { setNewFolderName(e.target.value); if (createPinError) setCreatePinError(null); }}
               className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body"
             />
             <Input
               placeholder="4-digit PIN (required)"
               value={newFolderPin}
-              onChange={(e) => setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              onChange={(e) => { setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4)); if (createPinError) setCreatePinError(null); }}
               inputMode="numeric"
               maxLength={4}
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body tracking-widest"
+              aria-invalid={!!createPinError}
+              className={`bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body tracking-widest ${createPinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
               onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
             />
+            {createPinError && (
+              <p className="text-sm text-destructive font-body" role="alert">{createPinError}</p>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={handleCreateFolder} className="bg-foreground text-background hover:bg-foreground/90 font-display">
@@ -356,7 +404,7 @@ const Gallery = () => {
       </Dialog>
 
       {/* PIN Prompt Dialog (unlock) */}
-      <Dialog open={!!pinPromptFolder} onOpenChange={(o) => !o && setPinPromptFolder(null)}>
+      <Dialog open={!!pinPromptFolder} onOpenChange={(o) => { if (!o) { setPinPromptFolder(null); setVerifyPinError(null); } }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
@@ -368,12 +416,16 @@ const Gallery = () => {
             autoFocus
             placeholder="••••"
             value={pinInput}
-            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); if (verifyPinError) setVerifyPinError(null); }}
             inputMode="numeric"
             maxLength={4}
-            className="bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body"
+            aria-invalid={!!verifyPinError}
+            className={`bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body ${verifyPinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && pinInput.length === 4 && handleVerifyPin()}
           />
+          {verifyPinError && (
+            <p className="text-sm text-destructive font-body text-center" role="alert">{verifyPinError}</p>
+          )}
           <DialogFooter>
             <Button
               onClick={handleVerifyPin}
@@ -386,27 +438,31 @@ const Gallery = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Manage PIN Dialog (admin) */}
-      <Dialog open={!!pinManageFolder} onOpenChange={(o) => !o && setPinManageFolder(null)}>
+      {/* Manage PIN Dialog (creator or admin only) */}
+      <Dialog open={!!pinManageFolder} onOpenChange={(o) => { if (!o) { setPinManageFolder(null); setManagePinError(null); } }}>
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
               <KeyRound className="w-4 h-4" /> Folder PIN
             </DialogTitle>
             <DialogDescription className="font-body">
-              Set a 4-digit PIN. Folders must remain locked.
+              Set a 4-digit PIN. Folders must remain locked. Only the folder creator or admin can change this.
             </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
             placeholder="4-digit PIN (required)"
             value={managePin}
-            onChange={(e) => setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onChange={(e) => { setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4)); if (managePinError) setManagePinError(null); }}
             inputMode="numeric"
             maxLength={4}
-            className="bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body"
+            aria-invalid={!!managePinError}
+            className={`bg-secondary border-border text-foreground text-center text-2xl tracking-[0.5em] font-body ${managePinError ? "border-destructive focus-visible:ring-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && handleSavePin()}
           />
+          {managePinError && (
+            <p className="text-sm text-destructive font-body text-center" role="alert">{managePinError}</p>
+          )}
           <DialogFooter>
             <Button onClick={handleSavePin} className="bg-foreground text-background hover:bg-foreground/90 font-display">
               Save

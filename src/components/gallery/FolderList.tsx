@@ -5,6 +5,7 @@ interface Folder {
   id: string;
   name: string;
   cover_image_url: string | null;
+  created_by?: string;
   created_at: string;
   is_locked?: boolean;
 }
@@ -12,13 +13,14 @@ interface Folder {
 interface FolderListProps {
   folders: Folder[];
   isAdmin: boolean;
+  currentUserId?: string;
   onSelect: (folderId: string) => void;
   onCreate: () => void;
   onDelete: (folderId: string) => void;
   onManagePin: (folderId: string) => void;
 }
 
-const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete, onManagePin }: FolderListProps) => {
+const FolderList = ({ folders, isAdmin, currentUserId, onSelect, onCreate, onDelete, onManagePin }: FolderListProps) => {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
@@ -61,23 +63,32 @@ const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete, onManagePi
                   </div>
                 )}
 
-                {isAdmin && (
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      className="p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground"
-                      onClick={(e) => { e.stopPropagation(); onManagePin(folder.id); }}
-                      title="Set / change PIN"
-                    >
-                      <KeyRound className="w-3 h-3" />
-                    </button>
-                    <button
-                      className="p-1.5 rounded-full bg-destructive/80 text-destructive-foreground hover:bg-destructive"
-                      onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
+                {(() => {
+                  const canManagePin = isAdmin || (currentUserId && folder.created_by === currentUserId);
+                  const canDelete = isAdmin || (currentUserId && folder.created_by === currentUserId);
+                  if (!canManagePin && !canDelete) return null;
+                  return (
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {canManagePin && (
+                        <button
+                          className="p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground"
+                          onClick={(e) => { e.stopPropagation(); onManagePin(folder.id); }}
+                          title="Set / change PIN"
+                        >
+                          <KeyRound className="w-3 h-3" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          className="p-1.5 rounded-full bg-destructive/80 text-destructive-foreground hover:bg-destructive"
+                          onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="p-2 text-center">
                 <p className="text-sm font-body font-medium text-foreground truncate">{folder.name}</p>
