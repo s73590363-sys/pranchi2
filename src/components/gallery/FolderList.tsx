@@ -5,6 +5,7 @@ interface Folder {
   id: string;
   name: string;
   cover_image_url: string | null;
+  created_by?: string;
   created_at: string;
   is_locked?: boolean;
 }
@@ -12,13 +13,14 @@ interface Folder {
 interface FolderListProps {
   folders: Folder[];
   isAdmin: boolean;
+  currentUserId?: string;
   onSelect: (folderId: string) => void;
   onCreate: () => void;
   onDelete: (folderId: string) => void;
   onManagePin: (folderId: string) => void;
 }
 
-const FolderList = ({ folders, isAdmin, onSelect, onCreate, onDelete, onManagePin }: FolderListProps) => {
+const FolderList = ({ folders, isAdmin, currentUserId, onSelect, onCreate, onDelete, onManagePin }: FolderListProps) => {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
