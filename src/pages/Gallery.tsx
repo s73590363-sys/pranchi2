@@ -338,7 +338,7 @@ const Gallery = () => {
               className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body"
             />
             <Input
-              placeholder="4-digit PIN (optional)"
+              placeholder="4-digit PIN (required)"
               value={newFolderPin}
               onChange={(e) => setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               inputMode="numeric"
