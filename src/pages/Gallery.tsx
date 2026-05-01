@@ -101,12 +101,12 @@ const Gallery = () => {
   const stopSlideshow = () => { setSlideshow(false); if (slideshowRef.current) clearInterval(slideshowRef.current); };
   const closeLightbox = () => { setLightbox(null); stopSlideshow(); };
 
-  // Create folder (with optional PIN)
+  // Create folder (PIN is REQUIRED — every folder must be locked)
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !user) return;
     const pin = newFolderPin.trim();
-    if (pin && !/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN must be 4 digits", variant: "destructive" });
+    if (!/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN is required", description: "Please set a 4-digit PIN to lock this folder.", variant: "destructive" });
       return;
     }
     const { data: folder, error } = await supabase
@@ -118,30 +118,29 @@ const Gallery = () => {
       toast({ title: "Failed to create folder", description: error?.message, variant: "destructive" });
       return;
     }
-    if (pin) {
-      const { error: pinErr } = await supabase.rpc("set_folder_pin", { _folder_id: folder.id, _pin: pin });
-      if (pinErr) {
-        toast({ title: "Folder created but PIN failed", description: pinErr.message, variant: "destructive" });
-      }
+    const { error: pinErr } = await supabase.rpc("set_folder_pin", { _folder_id: folder.id, _pin: pin });
+    if (pinErr) {
+      toast({ title: "Folder created but PIN failed", description: pinErr.message, variant: "destructive" });
+    } else {
+      toast({ title: `Folder "${newFolderName.trim()}" created with PIN lock` });
     }
-    toast({ title: `Folder "${newFolderName.trim()}" created${pin ? " with PIN lock" : ""}` });
     setNewFolderName("");
     setNewFolderPin("");
     setFolderDialog(false);
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
   };
 
-  // Manage PIN on existing folder (set / change / clear)
+  // Manage PIN on existing folder (PIN required — cannot remove)
   const handleSavePin = async () => {
     if (!pinManageFolder) return;
     const pin = managePin.trim();
-    if (pin && !/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN must be 4 digits (or empty to remove)", variant: "destructive" });
+    if (!/^\d{4}$/.test(pin)) {
+      toast({ title: "PIN is required", description: "Folders must stay locked with a 4-digit PIN.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin || null });
+    const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin });
     if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
-    toast({ title: pin ? "PIN updated" : "PIN removed" });
+    toast({ title: "PIN updated" });
     setPinManageFolder(null);
     setManagePin("");
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
@@ -329,7 +328,7 @@ const Gallery = () => {
         <DialogContent className="glass-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display">New Folder</DialogTitle>
-            <DialogDescription className="font-body">Optionally lock with a 4-digit PIN.</DialogDescription>
+            <DialogDescription className="font-body">A 4-digit PIN is required to lock this folder.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
@@ -339,7 +338,7 @@ const Gallery = () => {
               className="bg-secondary border-border text-foreground placeholder:text-muted-foreground font-body"
             />
             <Input
-              placeholder="4-digit PIN (optional)"
+              placeholder="4-digit PIN (required)"
               value={newFolderPin}
               onChange={(e) => setNewFolderPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               inputMode="numeric"
@@ -395,12 +394,12 @@ const Gallery = () => {
               <KeyRound className="w-4 h-4" /> Folder PIN
             </DialogTitle>
             <DialogDescription className="font-body">
-              Set a new 4-digit PIN, or leave empty and save to remove the lock.
+              Set a 4-digit PIN. Folders must remain locked.
             </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
-            placeholder="4-digit PIN (empty = unlock)"
+            placeholder="4-digit PIN (required)"
             value={managePin}
             onChange={(e) => setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4))}
             inputMode="numeric"
