@@ -106,12 +106,21 @@ const Gallery = () => {
 
   // Create folder (PIN is REQUIRED — every folder must be locked)
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim() || !user) return;
-    const pin = newFolderPin.trim();
-    if (!/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN is required", description: "Please set a 4-digit PIN to lock this folder.", variant: "destructive" });
+    if (!user) return;
+    if (!newFolderName.trim()) {
+      setCreatePinError("Folder name is required.");
       return;
     }
+    const pin = newFolderPin.trim();
+    if (pin.length === 0) {
+      setCreatePinError("PIN is required to lock this folder.");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setCreatePinError("PIN must be exactly 4 digits.");
+      return;
+    }
+    setCreatePinError(null);
     const { data: folder, error } = await supabase
       .from("gallery_folders")
       .insert({ name: newFolderName.trim(), created_by: user.id })
@@ -133,16 +142,41 @@ const Gallery = () => {
     queryClient.invalidateQueries({ queryKey: ["gallery-folders"] });
   };
 
+  // Open Manage PIN dialog — restricted to folder creator or admin
+  const handleOpenManagePin = (folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    const allowed = isAdmin || folder.created_by === user?.id;
+    if (!allowed) {
+      toast({ title: "Not authorized", description: "Only the folder creator or admin can change this PIN.", variant: "destructive" });
+      return;
+    }
+    setPinManageFolder(folderId);
+    setManagePin("");
+    setManagePinError(null);
+  };
+
   // Manage PIN on existing folder (PIN required — cannot remove)
   const handleSavePin = async () => {
     if (!pinManageFolder) return;
-    const pin = managePin.trim();
-    if (!/^\d{4}$/.test(pin)) {
-      toast({ title: "PIN is required", description: "Folders must stay locked with a 4-digit PIN.", variant: "destructive" });
+    const folder = folders.find((f) => f.id === pinManageFolder);
+    const allowed = isAdmin || folder?.created_by === user?.id;
+    if (!allowed) {
+      setManagePinError("You are not authorized to change this folder's PIN.");
       return;
     }
+    const pin = managePin.trim();
+    if (pin.length === 0) {
+      setManagePinError("PIN is required. Folders must stay locked.");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setManagePinError("PIN must be exactly 4 digits.");
+      return;
+    }
+    setManagePinError(null);
     const { error } = await supabase.rpc("set_folder_pin", { _folder_id: pinManageFolder, _pin: pin });
-    if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+    if (error) { setManagePinError(error.message); return; }
     toast({ title: "PIN updated" });
     setPinManageFolder(null);
     setManagePin("");
@@ -160,6 +194,7 @@ const Gallery = () => {
     if (requiresPin) {
       setPinPromptFolder(folderId);
       setPinInput("");
+      setVerifyPinError(null);
       return;
     }
     setActiveFolder(folderId);
@@ -168,11 +203,16 @@ const Gallery = () => {
   // Verify PIN
   const handleVerifyPin = async () => {
     if (!pinPromptFolder) return;
+    if (!/^\d{4}$/.test(pinInput)) {
+      setVerifyPinError("Enter the 4-digit PIN.");
+      return;
+    }
+    setVerifyPinError(null);
     setVerifying(true);
     const { data, error } = await supabase.rpc("verify_folder_pin", { _folder_id: pinPromptFolder, _pin: pinInput });
     setVerifying(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    if (!data) { toast({ title: "Incorrect PIN", variant: "destructive" }); return; }
+    if (error) { setVerifyPinError(error.message); return; }
+    if (!data) { setVerifyPinError("Incorrect PIN. Please try again."); return; }
     setActiveFolder(pinPromptFolder);
     setPinPromptFolder(null);
     setPinInput("");
