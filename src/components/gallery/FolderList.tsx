@@ -47,13 +47,22 @@ const FolderList = ({ folders, isAdmin, currentUserId, onSelect, onCreate, onDel
                 className="aspect-square flex items-center justify-center bg-secondary relative"
                 onClick={() => onSelect(folder.id)}
               >
-                {folder.cover_image_url && !folder.is_locked ? (
-                  <img src={folder.cover_image_url} alt={folder.name} className="w-full h-full object-cover" />
-                ) : folder.is_locked ? (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Lock className="w-10 h-10" />
-                    <span className="text-xs font-body">Locked</span>
-                  </div>
+                {folder.is_locked ? (
+                  <>
+                    {folder.preview_image_url && (
+                      <img
+                        src={folder.preview_image_url}
+                        alt={folder.name}
+                        className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-40"
+                      />
+                    )}
+                    <div className="relative flex flex-col items-center gap-2 text-muted-foreground">
+                      <Lock className="w-10 h-10" />
+                      <span className="text-xs font-body">Locked</span>
+                    </div>
+                  </>
+                ) : folder.preview_image_url ? (
+                  <img src={folder.preview_image_url} alt={folder.name} className="w-full h-full object-cover" />
                 ) : (
                   <FolderOpen className="w-12 h-12 text-muted-foreground" />
                 )}
