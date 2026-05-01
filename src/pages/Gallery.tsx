@@ -394,12 +394,12 @@ const Gallery = () => {
               <KeyRound className="w-4 h-4" /> Folder PIN
             </DialogTitle>
             <DialogDescription className="font-body">
-              Set a new 4-digit PIN, or leave empty and save to remove the lock.
+              Set a 4-digit PIN. Folders must remain locked.
             </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
-            placeholder="4-digit PIN (empty = unlock)"
+            placeholder="4-digit PIN (required)"
             value={managePin}
             onChange={(e) => setManagePin(e.target.value.replace(/\D/g, "").slice(0, 4))}
             inputMode="numeric"
