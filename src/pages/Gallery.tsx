@@ -525,6 +525,14 @@ const Gallery = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Cropper */}
+      <ImageCropper
+        open={!!pendingImage}
+        file={pendingImage}
+        onCancel={() => setPendingImage(null)}
+        onCropped={handleCroppedUpload}
+      />
     </div>
   );
 };
