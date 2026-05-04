@@ -264,38 +264,69 @@ const Gallery = () => {
     queryClient.invalidateQueries({ queryKey: ["gallery-media"] });
   };
 
-  // Upload
+  // Upload — images go through cropper, videos uploaded directly
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !user) return;
+    const arr = Array.from(files);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Find first image to crop; upload any videos directly first
+    const videos = arr.filter((f) => f.type.startsWith("video/"));
+    const images = arr.filter((f) => f.type.startsWith("image/"));
+
+    if (videos.length) {
+      setUploading(true);
+      try {
+        for (const v of videos) await uploadFileDirect(v, "video");
+        toast({ title: `Uploaded ${videos.length} video${videos.length > 1 ? "s" : ""}` });
+        queryClient.invalidateQueries({ queryKey: ["gallery-media"] });
+      } catch (err: any) {
+        toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    if (images.length) {
+      // open cropper for the first image; remaining are queued via attribute on file input — keep simple: only crop the first
+      setPendingImage(images[0]);
+      if (images.length > 1) {
+        toast({ title: "Multiple images", description: "Cropping only the first; upload others one by one." });
+      }
+    }
+  };
+
+  const uploadFileDirect = async (file: File | Blob, mediaType: "image" | "video", originalName?: string) => {
+    if (!user) throw new Error("Not signed in");
+    const ext = originalName ? originalName.split(".").pop() : (mediaType === "video" ? "mp4" : "jpg");
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("post-images").upload(path, file, { cacheControl: "3600", upsert: false, contentType: (file as any).type || (mediaType === "video" ? "video/mp4" : "image/jpeg") });
+    if (uploadError) throw uploadError;
+    const { data: urlData } = supabase.storage.from("post-images").getPublicUrl(path);
+    const caption = originalName ? originalName.replace(/\.[^/.]+$/, "") : "Photo";
+    const { error: postError } = await supabase.from("posts").insert({
+      user_id: user.id,
+      image_url: urlData.publicUrl,
+      caption,
+      media_type: mediaType,
+      folder_id: activeFolder,
+    });
+    if (postError) throw postError;
+  };
+
+  const handleCroppedUpload = async (blob: Blob) => {
+    if (!pendingImage) return;
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        const isVideo = file.type.startsWith("video/");
-        const ext = file.name.split(".").pop();
-        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage.from("post-images").upload(path, file, { cacheControl: "3600", upsert: false });
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from("post-images").getPublicUrl(path);
-
-        const { error: postError } = await supabase.from("posts").insert({
-          user_id: user.id,
-          image_url: urlData.publicUrl,
-          caption: file.name.replace(/\.[^/.]+$/, ""),
-          media_type: isVideo ? "video" : "image",
-          folder_id: activeFolder,
-        });
-        if (postError) throw postError;
-      }
+      await uploadFileDirect(blob, "image", pendingImage.name.replace(/\.[^/.]+$/, "") + ".jpg");
       toast({ title: "Uploaded successfully!" });
       queryClient.invalidateQueries({ queryKey: ["gallery-media"] });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setPendingImage(null);
     }
   };
 
