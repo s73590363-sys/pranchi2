@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import FolderList from "@/components/gallery/FolderList";
 import MediaGrid from "@/components/gallery/MediaGrid";
 import Lightbox from "@/components/gallery/Lightbox";
+import ImageCropper from "@/components/gallery/ImageCropper";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ const Gallery = () => {
   const [createPinError, setCreatePinError] = useState<string | null>(null);
   const [managePinError, setManagePinError] = useState<string | null>(null);
   const [verifyPinError, setVerifyPinError] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const slideshowRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
