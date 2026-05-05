@@ -192,7 +192,7 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
                 </div>
                 {canDelete && (
                   <button
-                    onClick={() => deleteComment(c.id)}
+                    onClick={() => setConfirmDeleteId(c.id)}
                     className={`${sub} hover:text-destructive p-1`}
                     aria-label="Delete comment"
                   >
