@@ -131,9 +131,22 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
     }
   };
 
-  const deleteComment = async (id: string) => {
-    const { error } = await supabase.from("post_comments").delete().eq("id", id);
+  const confirmDelete = async () => {
+    if (!confirmDeleteId || !user) return;
+    const target = comments.find((c) => c.id === confirmDeleteId);
+    if (!target) { setConfirmDeleteId(null); return; }
+    // Authorization guard: only author or admin
+    if (target.user_id !== user.id && !isAdmin) {
+      toast({ title: "Not authorized", description: "Only the comment author or admin can delete this.", variant: "destructive" });
+      setConfirmDeleteId(null);
+      return;
+    }
+    setDeleting(true);
+    const { error } = await supabase.from("post_comments").delete().eq("id", confirmDeleteId);
+    setDeleting(false);
+    setConfirmDeleteId(null);
     if (error) toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    else toast({ title: "Comment deleted" });
   };
 
   return (
