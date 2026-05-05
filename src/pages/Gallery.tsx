@@ -271,29 +271,26 @@ const Gallery = () => {
     const arr = Array.from(files);
     if (fileInputRef.current) fileInputRef.current.value = "";
 
-    // Find first image to crop; upload any videos directly first
     const videos = arr.filter((f) => f.type.startsWith("video/"));
     const images = arr.filter((f) => f.type.startsWith("image/"));
 
-    if (videos.length) {
-      setUploading(true);
-      try {
-        for (const v of videos) await uploadFileDirect(v, "video");
-        toast({ title: `Uploaded ${videos.length} video${videos.length > 1 ? "s" : ""}` });
-        queryClient.invalidateQueries({ queryKey: ["gallery-media"] });
-      } catch (err: any) {
-        toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-      } finally {
-        setUploading(false);
-      }
+    // Single image only → open cropper. Multiple files (or any video mix) → upload all directly.
+    if (arr.length === 1 && images.length === 1) {
+      setPendingImage(images[0]);
+      return;
     }
 
-    if (images.length) {
-      // open cropper for the first image; remaining are queued via attribute on file input — keep simple: only crop the first
-      setPendingImage(images[0]);
-      if (images.length > 1) {
-        toast({ title: "Multiple images", description: "Cropping only the first; upload others one by one." });
-      }
+    setUploading(true);
+    try {
+      for (const v of videos) await uploadFileDirect(v, "video", v.name);
+      for (const img of images) await uploadFileDirect(img, "image", img.name);
+      const total = videos.length + images.length;
+      toast({ title: `Uploaded ${total} file${total > 1 ? "s" : ""}` });
+      queryClient.invalidateQueries({ queryKey: ["gallery-media"] });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
   };
 
