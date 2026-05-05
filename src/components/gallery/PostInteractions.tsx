@@ -6,6 +6,16 @@ import { isAdminUser } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CommentRow {
   id: string;
@@ -30,6 +40,8 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const dark = variant === "dark";
   const txt = dark ? "text-white" : "text-foreground";
@@ -119,9 +131,22 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
     }
   };
 
-  const deleteComment = async (id: string) => {
-    const { error } = await supabase.from("post_comments").delete().eq("id", id);
+  const confirmDelete = async () => {
+    if (!confirmDeleteId || !user) return;
+    const target = comments.find((c) => c.id === confirmDeleteId);
+    if (!target) { setConfirmDeleteId(null); return; }
+    // Authorization guard: only author or admin
+    if (target.user_id !== user.id && !isAdmin) {
+      toast({ title: "Not authorized", description: "Only the comment author or admin can delete this.", variant: "destructive" });
+      setConfirmDeleteId(null);
+      return;
+    }
+    setDeleting(true);
+    const { error } = await supabase.from("post_comments").delete().eq("id", confirmDeleteId);
+    setDeleting(false);
+    setConfirmDeleteId(null);
     if (error) toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    else toast({ title: "Comment deleted" });
   };
 
   return (
@@ -167,7 +192,7 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
                 </div>
                 {canDelete && (
                   <button
-                    onClick={() => deleteComment(c.id)}
+                    onClick={() => setConfirmDeleteId(c.id)}
                     className={`${sub} hover:text-destructive p-1`}
                     aria-label="Delete comment"
                   >
@@ -195,6 +220,23 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
           </Button>
         </div>
       )}
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o && !deleting) setConfirmDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This comment will be permanently removed for everyone. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Deleting...</> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
