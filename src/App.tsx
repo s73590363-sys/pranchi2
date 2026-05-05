@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Gallery from "./pages/Gallery";
 import Admin from "./pages/Admin";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
