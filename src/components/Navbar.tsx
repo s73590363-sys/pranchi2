@@ -19,6 +19,7 @@ const Navbar = () => {
 
   const links = [
     { to: "/gallery", label: "Gallery" },
+    { to: "/chat", label: "Chat" },
     ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
