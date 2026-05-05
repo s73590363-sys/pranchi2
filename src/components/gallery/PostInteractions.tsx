@@ -40,6 +40,8 @@ const PostInteractions = ({ postId, variant = "dark" }: Props) => {
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const dark = variant === "dark";
   const txt = dark ? "text-white" : "text-foreground";
