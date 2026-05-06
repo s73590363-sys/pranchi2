@@ -48,25 +48,31 @@ export type Database = {
       }
       conversations: {
         Row: {
+          avatar_url: string | null
           created_at: string
           created_by: string | null
           id: string
           name: string | null
           type: string
+          wallpaper_url: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string | null
           type: string
+          wallpaper_url?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string | null
           type?: string
+          wallpaper_url?: string | null
         }
         Relationships: []
       }
@@ -131,6 +137,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      message_reads: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -351,6 +378,7 @@ export type Database = {
     Functions: {
       folder_requires_pin: { Args: { _folder_id: string }; Returns: boolean }
       get_or_create_dm: { Args: { _other_user: string }; Returns: string }
+      is_app_admin: { Args: never; Returns: boolean }
       is_conversation_participant: {
         Args: { _conv: string; _user: string }
         Returns: boolean
