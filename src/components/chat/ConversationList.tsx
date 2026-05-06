@@ -30,6 +30,7 @@ interface Props {
 
 const ConversationList = ({ activeId, onSelect }: Props) => {
   const { user } = useAuth();
+  const isAdmin = isAdminUser(user?.email);
   const [convs, setConvs] = useState<ConvRow[]>([]);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [members, setMembers] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
@@ -134,12 +135,14 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-border/50">
         <h2 className="font-display font-semibold text-lg">Chats</h2>
-        <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
-          <DialogTrigger asChild>
-            <Button size="icon" variant="ghost" onClick={openMembersDialog} aria-label="New chat">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-1">
+          {isAdmin && <CreateGroupDialog onCreated={(id) => onSelect(id)} />}
+          <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
+            <DialogTrigger asChild>
+              <Button size="icon" variant="ghost" onClick={openMembersDialog} aria-label="New chat">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Start a direct message</DialogTitle></DialogHeader>
             <div className="relative">
@@ -163,7 +166,8 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
               {filtered.length === 0 && <p className="text-sm text-muted-foreground p-2">No members found.</p>}
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -180,7 +184,10 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
             >
               <Avatar className="w-10 h-10">
                 {c.type === "group" ? (
-                  <AvatarFallback><Users className="w-4 h-4" /></AvatarFallback>
+                  <>
+                    {c.avatar_url && <AvatarImage src={c.avatar_url} />}
+                    <AvatarFallback><Users className="w-4 h-4" /></AvatarFallback>
+                  </>
                 ) : (
                   <>
                     {c.other?.avatar_url && <AvatarImage src={c.other.avatar_url} />}
