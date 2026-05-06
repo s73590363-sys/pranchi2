@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { isAdminUser } from "@/lib/admin";
+import CreateGroupDialog from "./CreateGroupDialog";
 
 const DEFAULT_GROUP_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -15,6 +17,7 @@ interface ConvRow {
   id: string;
   type: "group" | "dm";
   name: string | null;
+  avatar_url?: string | null;
   other?: { user_id: string; display_name: string | null; avatar_url: string | null } | null;
   lastMessage?: string | null;
   lastAt?: string | null;
@@ -27,6 +30,7 @@ interface Props {
 
 const ConversationList = ({ activeId, onSelect }: Props) => {
   const { user } = useAuth();
+  const isAdmin = isAdminUser(user?.email);
   const [convs, setConvs] = useState<ConvRow[]>([]);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [members, setMembers] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
@@ -43,7 +47,7 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
 
     const { data: cs } = await supabase
       .from("conversations")
-      .select("id, type, name")
+      .select("id, type, name, avatar_url")
       .in("id", ids);
 
     // For DMs, fetch other participant
@@ -75,10 +79,11 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
       if (!lastMap[m.conversation_id]) lastMap[m.conversation_id] = m;
     });
 
-    const rows: ConvRow[] = (cs ?? []).map((c) => ({
+    const rows: ConvRow[] = (cs ?? []).map((c: any) => ({
       id: c.id,
       type: c.type as "group" | "dm",
       name: c.name,
+      avatar_url: c.avatar_url,
       other: c.type === "dm" ? dmOthers[c.id] ?? null : null,
       lastMessage: lastMap[c.id]?.media_type === "text"
         ? lastMap[c.id]?.content
@@ -130,12 +135,14 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-border/50">
         <h2 className="font-display font-semibold text-lg">Chats</h2>
-        <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
-          <DialogTrigger asChild>
-            <Button size="icon" variant="ghost" onClick={openMembersDialog} aria-label="New chat">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-1">
+          {isAdmin && <CreateGroupDialog onCreated={(id) => onSelect(id)} />}
+          <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
+            <DialogTrigger asChild>
+              <Button size="icon" variant="ghost" onClick={openMembersDialog} aria-label="New chat">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Start a direct message</DialogTitle></DialogHeader>
             <div className="relative">
@@ -159,7 +166,8 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
               {filtered.length === 0 && <p className="text-sm text-muted-foreground p-2">No members found.</p>}
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -176,7 +184,10 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
             >
               <Avatar className="w-10 h-10">
                 {c.type === "group" ? (
-                  <AvatarFallback><Users className="w-4 h-4" /></AvatarFallback>
+                  <>
+                    {c.avatar_url && <AvatarImage src={c.avatar_url} />}
+                    <AvatarFallback><Users className="w-4 h-4" /></AvatarFallback>
+                  </>
                 ) : (
                   <>
                     {c.other?.avatar_url && <AvatarImage src={c.other.avatar_url} />}

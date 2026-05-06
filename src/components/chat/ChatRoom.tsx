@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Square, Send, Paperclip, Smile, Reply, Trash2, X } from "lucide-react";
+import { Mic, Square, Send, Paperclip, Smile, Reply, Trash2, X, Settings, Users, Check, CheckCheck } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -12,6 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAIL } from "@/lib/admin";
+import GroupSettings from "./GroupSettings";
 
 interface Msg {
   id: string;
@@ -26,6 +27,7 @@ interface Msg {
 
 interface Reaction { id: string; message_id: string; user_id: string; emoji: string; }
 interface Profile { user_id: string; display_name: string | null; avatar_url: string | null; }
+interface Read { message_id: string; user_id: string; }
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
@@ -34,12 +36,16 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [reads, setReads] = useState<Read[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [conv, setConv] = useState<{ type: string; name: string | null; avatar_url: string | null; wallpaper_url: string | null } | null>(null);
+  const [participantCount, setParticipantCount] = useState(0);
   const [text, setText] = useState("");
   const [reply, setReply] = useState<Msg | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const recChunks = useRef<Blob[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -61,6 +67,23 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
     });
   };
 
+  const loadConv = useCallback(async () => {
+    const { data } = await supabase.from("conversations")
+      .select("type, name, avatar_url, wallpaper_url").eq("id", conversationId).maybeSingle();
+    setConv(data as any);
+    const { count } = await supabase.from("conversation_participants")
+      .select("user_id", { count: "exact", head: true }).eq("conversation_id", conversationId);
+    setParticipantCount(count ?? 0);
+  }, [conversationId]);
+
+  const markReads = async (msgs: Msg[]) => {
+    if (!user) return;
+    const mine = msgs.filter((m) => m.user_id !== user.id).map((m) => ({ message_id: m.id, user_id: user.id }));
+    if (mine.length) {
+      await supabase.from("message_reads").upsert(mine, { onConflict: "message_id,user_id", ignoreDuplicates: true });
+    }
+  };
+
   const loadAll = useCallback(async () => {
     const { data: msgs } = await supabase
       .from("messages")
@@ -68,35 +91,35 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(200);
-    setMessages((msgs ?? []) as Msg[]);
-    const ids = [...new Set((msgs ?? []).map((m) => m.user_id))];
+    const list = (msgs ?? []) as Msg[];
+    setMessages(list);
+    const ids = [...new Set(list.map((m) => m.user_id))];
     if (ids.length) await loadProfiles(ids);
-    const msgIds = (msgs ?? []).map((m) => m.id);
+    const msgIds = list.map((m) => m.id);
     if (msgIds.length) {
-      const { data: rxs } = await supabase
-        .from("message_reactions")
-        .select("*")
-        .in("message_id", msgIds);
+      const [{ data: rxs }, { data: rds }] = await Promise.all([
+        supabase.from("message_reactions").select("*").in("message_id", msgIds),
+        supabase.from("message_reads").select("message_id, user_id").in("message_id", msgIds),
+      ]);
       setReactions((rxs ?? []) as Reaction[]);
+      setReads((rds ?? []) as Read[]);
+      await loadProfiles([...new Set((rds ?? []).map((r) => r.user_id))]);
     } else {
-      setReactions([]);
+      setReactions([]); setReads([]);
     }
-    // mark read
-    if (user) {
-      await supabase
-        .from("conversation_participants")
-        .update({ last_read_at: new Date().toISOString() })
-        .eq("conversation_id", conversationId)
-        .eq("user_id", user.id);
-    }
+    await markReads(list);
   }, [conversationId, user?.id]);
 
   useEffect(() => {
+    loadConv();
     loadAll();
     const ch = supabase
       .channel(`conv-${conversationId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_reads" }, () => loadAll())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversations", filter: `id=eq.${conversationId}` }, () => loadConv())
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_participants", filter: `conversation_id=eq.${conversationId}` }, () => loadConv())
       .on("postgres_changes", { event: "*", schema: "public", table: "typing_indicators", filter: `conversation_id=eq.${conversationId}` }, async () => {
         const { data } = await supabase
           .from("typing_indicators")
@@ -107,7 +130,7 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [conversationId, loadAll, user?.id]);
+  }, [conversationId, loadAll, loadConv, user?.id]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -234,9 +257,44 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
 
   const findMsg = (id: string | null) => id ? messages.find((m) => m.id === id) : null;
 
+  const readReceiptFor = (m: Msg) => {
+    if (m.user_id !== user?.id) return null;
+    const others = reads.filter((r) => r.message_id === m.id && r.user_id !== user.id);
+    const expected = Math.max(participantCount - 1, 0);
+    const allRead = expected > 0 && others.length >= expected;
+    if (others.length === 0) return <Check className="w-3 h-3 opacity-70" />;
+    return (
+      <div className="flex items-center gap-1">
+        <CheckCheck className={`w-3 h-3 ${allRead ? "text-primary-foreground" : "opacity-70"}`} />
+        {conv?.type === "group" && <span className="text-[10px] opacity-70">{others.length}/{expected}</span>}
+      </div>
+    );
+  };
+
+  const headerTitle = conv?.type === "group" ? (conv.name ?? "Group") : "Direct Message";
+
   return (
     <div className="flex flex-col h-full">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex items-center gap-3 p-3 border-b border-border/50">
+        <Avatar className="w-9 h-9">
+          {conv?.avatar_url ? <AvatarImage src={conv.avatar_url} /> : <AvatarFallback><Users className="w-4 h-4" /></AvatarFallback>}
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{headerTitle}</div>
+          {conv?.type === "group" && <div className="text-xs text-muted-foreground">{participantCount} members</div>}
+        </div>
+        {conv?.type === "group" && isAdmin && (
+          <Button size="icon" variant="ghost" onClick={() => setSettingsOpen(true)} aria-label="Group settings">
+            <Settings className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3"
+        style={conv?.wallpaper_url ? { backgroundImage: `url(${conv.wallpaper_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
         {messages.map((m) => {
           const isMe = m.user_id === user?.id;
           const prof = profiles[m.user_id];
@@ -270,21 +328,24 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
                   )}
                 </div>
                 {renderReactionChips(m)}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="text-xs text-muted-foreground hover:text-foreground"><Smile className="w-3 h-3" /></button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-1 flex gap-1">
-                      {EMOJIS.map((e) => (
-                        <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-lg hover:bg-secondary rounded p-1">{e}</button>
-                      ))}
-                    </PopoverContent>
-                  </Popover>
-                  <button onClick={() => setReply(m)} className="text-xs text-muted-foreground hover:text-foreground"><Reply className="w-3 h-3" /></button>
-                  {canDelete && (
-                    <button onClick={() => setConfirmDelete(m.id)} className="text-xs text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                  )}
+                <div className={`flex gap-2 items-center mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-xs text-muted-foreground hover:text-foreground"><Smile className="w-3 h-3" /></button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-1 flex gap-1">
+                        {EMOJIS.map((e) => (
+                          <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-lg hover:bg-secondary rounded p-1">{e}</button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                    <button onClick={() => setReply(m)} className="text-xs text-muted-foreground hover:text-foreground"><Reply className="w-3 h-3" /></button>
+                    {canDelete && (
+                      <button onClick={() => setConfirmDelete(m.id)} className="text-xs text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                    )}
+                  </div>
+                  {isMe && <div className="text-muted-foreground">{readReceiptFor(m)}</div>}
                 </div>
               </div>
             </div>
@@ -343,6 +404,10 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {conv?.type === "group" && (
+        <GroupSettings conversationId={conversationId} open={settingsOpen} onOpenChange={setSettingsOpen} />
+      )}
     </div>
   );
 };
