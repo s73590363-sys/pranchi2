@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { isAdminUser } from "@/lib/admin";
+import CreateGroupDialog from "./CreateGroupDialog";
 
 const DEFAULT_GROUP_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -15,6 +17,7 @@ interface ConvRow {
   id: string;
   type: "group" | "dm";
   name: string | null;
+  avatar_url?: string | null;
   other?: { user_id: string; display_name: string | null; avatar_url: string | null } | null;
   lastMessage?: string | null;
   lastAt?: string | null;
@@ -43,7 +46,7 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
 
     const { data: cs } = await supabase
       .from("conversations")
-      .select("id, type, name")
+      .select("id, type, name, avatar_url")
       .in("id", ids);
 
     // For DMs, fetch other participant
@@ -75,10 +78,11 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
       if (!lastMap[m.conversation_id]) lastMap[m.conversation_id] = m;
     });
 
-    const rows: ConvRow[] = (cs ?? []).map((c) => ({
+    const rows: ConvRow[] = (cs ?? []).map((c: any) => ({
       id: c.id,
       type: c.type as "group" | "dm",
       name: c.name,
+      avatar_url: c.avatar_url,
       other: c.type === "dm" ? dmOthers[c.id] ?? null : null,
       lastMessage: lastMap[c.id]?.media_type === "text"
         ? lastMap[c.id]?.content
