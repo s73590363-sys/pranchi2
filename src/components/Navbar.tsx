@@ -74,13 +74,18 @@ const Navbar = () => {
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className={`text-sm font-body px-2 py-1 rounded transition-colors ${
+              className={`flex items-center justify-between text-sm font-body px-2 py-1 rounded transition-colors ${
                 location.pathname === link.to
                   ? "text-foreground bg-secondary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {link.label}
+              <span>{link.label}</span>
+              {link.badge > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {link.badge > 99 ? "99+" : link.badge}
+                </span>
+              )}
             </Link>
           ))}
           {user && (
