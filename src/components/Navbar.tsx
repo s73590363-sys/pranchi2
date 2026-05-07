@@ -38,13 +38,18 @@ const Navbar = () => {
             <Link
               key={link.to}
               to={link.to}
-              className={`text-sm font-body transition-colors ${
+              className={`relative text-sm font-body transition-colors ${
                 location.pathname === link.to
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {link.label}
+              {link.badge > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {link.badge > 99 ? "99+" : link.badge}
+                </span>
+              )}
             </Link>
           ))}
           {user && (
