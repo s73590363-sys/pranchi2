@@ -80,8 +80,18 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
     if (!user) return;
     const mine = msgs.filter((m) => m.user_id !== user.id).map((m) => ({ message_id: m.id, user_id: user.id }));
     if (mine.length) {
+      // Optimistic local update so ✓✓ appears immediately for the sender on realtime
+      setReads((prev) => {
+        const seen = new Set(prev.map((r) => `${r.message_id}:${r.user_id}`));
+        const add = mine.filter((m) => !seen.has(`${m.message_id}:${m.user_id}`));
+        return add.length ? [...prev, ...add] : prev;
+      });
       await supabase.from("message_reads").upsert(mine, { onConflict: "message_id,user_id", ignoreDuplicates: true });
     }
+    // Update participant last_read_at so unread counts elsewhere reset
+    await supabase.from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId).eq("user_id", user.id);
   };
 
   const loadAll = useCallback(async () => {
