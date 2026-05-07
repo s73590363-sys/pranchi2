@@ -4,6 +4,7 @@ import { Menu, X, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminUser } from "@/lib/admin";
+import { useChatUnread } from "@/hooks/use-chat-unread";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -11,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const isAdmin = isAdminUser(user?.email);
+  const { total: unreadTotal } = useChatUnread();
 
   const handleSignOut = async () => {
     await signOut();
@@ -18,9 +20,9 @@ const Navbar = () => {
   };
 
   const links = [
-    { to: "/gallery", label: "Gallery" },
-    { to: "/chat", label: "Chat" },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
+    { to: "/gallery", label: "Gallery", badge: 0 },
+    { to: "/chat", label: "Chat", badge: unreadTotal },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin", badge: 0 }] : []),
   ];
 
   return (
@@ -36,13 +38,18 @@ const Navbar = () => {
             <Link
               key={link.to}
               to={link.to}
-              className={`text-sm font-body transition-colors ${
+              className={`relative text-sm font-body transition-colors ${
                 location.pathname === link.to
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {link.label}
+              {link.badge > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {link.badge > 99 ? "99+" : link.badge}
+                </span>
+              )}
             </Link>
           ))}
           {user && (
@@ -67,13 +74,18 @@ const Navbar = () => {
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className={`text-sm font-body px-2 py-1 rounded transition-colors ${
+              className={`flex items-center justify-between text-sm font-body px-2 py-1 rounded transition-colors ${
                 location.pathname === link.to
                   ? "text-foreground bg-secondary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {link.label}
+              <span>{link.label}</span>
+              {link.badge > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {link.badge > 99 ? "99+" : link.badge}
+                </span>
+              )}
             </Link>
           ))}
           {user && (

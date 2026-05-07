@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { isAdminUser } from "@/lib/admin";
 import CreateGroupDialog from "./CreateGroupDialog";
+import { useChatUnread } from "@/hooks/use-chat-unread";
 
 const DEFAULT_GROUP_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -31,6 +32,7 @@ interface Props {
 const ConversationList = ({ activeId, onSelect }: Props) => {
   const { user } = useAuth();
   const isAdmin = isAdminUser(user?.email);
+  const { unread } = useChatUnread();
   const [convs, setConvs] = useState<ConvRow[]>([]);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [members, setMembers] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
@@ -199,6 +201,11 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
                 <div className="font-medium text-sm truncate">{title}</div>
                 <div className="text-xs text-muted-foreground truncate">{c.lastMessage ?? "No messages yet"}</div>
               </div>
+              {(unread[c.id] ?? 0) > 0 && !isActive && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {unread[c.id] > 99 ? "99+" : unread[c.id]}
+                </span>
+              )}
             </button>
           );
         })}
