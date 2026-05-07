@@ -272,12 +272,39 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
     const others = reads.filter((r) => r.message_id === m.id && r.user_id !== user.id);
     const expected = Math.max(participantCount - 1, 0);
     const allRead = expected > 0 && others.length >= expected;
-    if (others.length === 0) return <Check className="w-3 h-3 opacity-70" />;
+    const icon = others.length === 0
+      ? <Check className="w-3 h-3 opacity-70" />
+      : <CheckCheck className={`w-3 h-3 ${allRead ? "text-primary-foreground" : "opacity-70"}`} />;
+
+    if (conv?.type !== "group") return icon;
+
     return (
-      <div className="flex items-center gap-1">
-        <CheckCheck className={`w-3 h-3 ${allRead ? "text-primary-foreground" : "opacity-70"}`} />
-        {conv?.type === "group" && <span className="text-[10px] opacity-70">{others.length}/{expected}</span>}
-      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="flex items-center gap-1 hover:opacity-80" aria-label="Read by">
+            {icon}
+            <span className="text-[10px] opacity-70">{others.length}/{expected}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2">
+          <div className="text-xs font-medium mb-1">Read by {others.length}/{expected}</div>
+          {others.length === 0 && <div className="text-xs text-muted-foreground">No one yet</div>}
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {others.map((r) => {
+              const p = profiles[r.user_id];
+              return (
+                <div key={r.user_id} className="flex items-center gap-2">
+                  <Avatar className="w-5 h-5">
+                    {p?.avatar_url && <AvatarImage src={p.avatar_url} />}
+                    <AvatarFallback className="text-[10px]">{(p?.display_name ?? "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs">{p?.display_name ?? "Member"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   };
 
