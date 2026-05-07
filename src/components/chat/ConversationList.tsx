@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { isAdminUser } from "@/lib/admin";
 import CreateGroupDialog from "./CreateGroupDialog";
+import { useChatUnread } from "@/hooks/use-chat-unread";
 
 const DEFAULT_GROUP_ID = "00000000-0000-0000-0000-000000000001";
 
