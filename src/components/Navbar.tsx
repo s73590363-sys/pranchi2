@@ -4,6 +4,7 @@ import { Menu, X, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminUser } from "@/lib/admin";
+import { useChatUnread } from "@/hooks/use-chat-unread";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -11,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const isAdmin = isAdminUser(user?.email);
+  const { total: unreadTotal } = useChatUnread();
 
   const handleSignOut = async () => {
     await signOut();
@@ -18,9 +20,9 @@ const Navbar = () => {
   };
 
   const links = [
-    { to: "/gallery", label: "Gallery" },
-    { to: "/chat", label: "Chat" },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
+    { to: "/gallery", label: "Gallery", badge: 0 },
+    { to: "/chat", label: "Chat", badge: unreadTotal },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin", badge: 0 }] : []),
   ];
 
   return (
