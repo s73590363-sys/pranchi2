@@ -32,6 +32,7 @@ interface Props {
 const ConversationList = ({ activeId, onSelect }: Props) => {
   const { user } = useAuth();
   const isAdmin = isAdminUser(user?.email);
+  const { unread } = useChatUnread();
   const [convs, setConvs] = useState<ConvRow[]>([]);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [members, setMembers] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
