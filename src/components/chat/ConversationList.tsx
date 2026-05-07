@@ -201,6 +201,11 @@ const ConversationList = ({ activeId, onSelect }: Props) => {
                 <div className="font-medium text-sm truncate">{title}</div>
                 <div className="text-xs text-muted-foreground truncate">{c.lastMessage ?? "No messages yet"}</div>
               </div>
+              {(unread[c.id] ?? 0) > 0 && !isActive && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {unread[c.id] > 99 ? "99+" : unread[c.id]}
+                </span>
+              )}
             </button>
           );
         })}
