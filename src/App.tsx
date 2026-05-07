@@ -13,6 +13,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Gallery from "./pages/Gallery";
 import Admin from "./pages/Admin";
 import Chat from "./pages/Chat";
+import ChatNotifier from "@/components/chat/ChatNotifier";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ChatNotifier />
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Square, Send, Paperclip, Smile, Reply, Trash2, X, Settings, Users, Check, CheckCheck } from "lucide-react";
+import { Mic, Square, Send, Paperclip, Smile, Reply, Trash2, X, Settings, Users, Check, CheckCheck, CheckCheck as MarkReadIcon } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -320,6 +320,10 @@ const ChatRoom = ({ conversationId }: { conversationId: string }) => {
           <div className="font-medium truncate">{headerTitle}</div>
           {conv?.type === "group" && <div className="text-xs text-muted-foreground">{participantCount} members</div>}
         </div>
+        <Button size="sm" variant="ghost" onClick={() => markReads(messages)} className="gap-1" aria-label="Mark as read">
+          <MarkReadIcon className="w-4 h-4" />
+          <span className="hidden sm:inline text-xs">Mark read</span>
+        </Button>
         {conv?.type === "group" && isAdmin && (
           <Button size="icon" variant="ghost" onClick={() => setSettingsOpen(true)} aria-label="Group settings">
             <Settings className="w-4 h-4" />
