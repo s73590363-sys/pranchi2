@@ -52,8 +52,8 @@ const GroupSettings = ({ conversationId, open, onOpenChange }: Props) => {
   const uploadFile = async (file: File, kind: "avatar" | "wallpaper") => {
     if (!user) return;
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `groups/${conversationId}/${kind}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("chat-media").upload(path, file, { upsert: true });
+    const path = `${user.id}/group-${conversationId}-${kind}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("chat-media").upload(path, file, { upsert: true, contentType: file.type });
     if (error) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); return; }
     const { data: pub } = supabase.storage.from("chat-media").getPublicUrl(path);
     const url = pub.publicUrl;
