@@ -51,12 +51,14 @@ const GroupSettings = ({ conversationId, open, onOpenChange }: Props) => {
 
   const uploadFile = async (file: File, kind: "avatar" | "wallpaper") => {
     if (!user) return;
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${user.id}/group-${conversationId}-${kind}-${Date.now()}.${ext}`;
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    // Stable path keyed by group + kind so URL never changes across updates
+    const path = `${user.id}/group-${conversationId}/${kind}.${ext}`;
     const { error } = await supabase.storage.from("chat-media").upload(path, file, { upsert: true, contentType: file.type });
     if (error) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); return; }
     const { data: pub } = supabase.storage.from("chat-media").getPublicUrl(path);
-    const url = pub.publicUrl;
+    // Cache-bust the rendered URL while the storage path itself stays stable
+    const url = `${pub.publicUrl}?v=${Date.now()}`;
     const patch = kind === "avatar" ? { avatar_url: url } : { wallpaper_url: url };
     const { error: uErr } = await supabase.from("conversations").update(patch).eq("id", conversationId);
     if (uErr) { toast({ title: "Update failed", description: uErr.message, variant: "destructive" }); return; }
