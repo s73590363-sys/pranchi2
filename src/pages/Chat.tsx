@@ -14,7 +14,8 @@ const DEFAULT_GROUP_ID = "00000000-0000-0000-0000-000000000001";
 const Chat = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeConv, setActiveConv] = useState<string | null>(searchParams.get("c"));
+  const initial = searchParams.get("c");
+  const [activeConv, setActiveConv] = useState<string | null>(initial);
 
   useEffect(() => {
     if (!user) return;
@@ -24,25 +25,33 @@ const Chat = () => {
     }).then(() => {});
   }, [user]);
 
-  // Sync URL <-> active conversation, and broadcast to global notifier
+  // Broadcast active conversation to global notifier
   useEffect(() => {
     setActiveConversationId(activeConv);
+    return () => { setActiveConversationId(null); };
+  }, [activeConv]);
+
+  // Sync active conversation -> URL (one-way; URL changes from outside still reflected below)
+  useEffect(() => {
     const current = searchParams.get("c");
     if (activeConv && current !== activeConv) {
-      setSearchParams({ c: activeConv }, { replace: true });
+      const next = new URLSearchParams(searchParams);
+      next.set("c", activeConv);
+      setSearchParams(next, { replace: true });
     } else if (!activeConv && current) {
       const next = new URLSearchParams(searchParams);
       next.delete("c");
       setSearchParams(next, { replace: true });
     }
-    return () => { setActiveConversationId(null); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConv]);
 
-  // React to URL changes (e.g. clicking "Open" in a toast)
+  // React to URL changes from outside (toast "Open" link)
   useEffect(() => {
     const c = searchParams.get("c");
-    if (c && c !== activeConv) setActiveConv(c);
+    setActiveConv((prev) => (c !== prev ? c : prev));
   }, [searchParams]);
+
 
   return (
     <div className="h-screen bg-background flex flex-col">
