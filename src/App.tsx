@@ -14,6 +14,7 @@ import Gallery from "./pages/Gallery";
 import Admin from "./pages/Admin";
 import Chat from "./pages/Chat";
 import ChatNotifier from "@/components/chat/ChatNotifier";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
