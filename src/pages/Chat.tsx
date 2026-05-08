@@ -45,9 +45,9 @@ const Chat = () => {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="flex-1 max-w-6xl w-full mx-auto flex overflow-hidden">
+      <div className="flex-1 min-h-0 max-w-6xl w-full mx-auto flex overflow-hidden">
         <aside className={`${activeConv ? "hidden md:flex" : "flex"} flex-col w-full md:w-80 border-r border-border/50`}>
           <ConversationList activeId={activeConv} onSelect={(id) => setActiveConv(id)} />
         </aside>
